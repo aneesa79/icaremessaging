@@ -33,6 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->close();
 }
 
+
 // Fetch all messages with sender's name
 $stmt = $conn->prepare("SELECT id, sender_name, user_id, message, timestamp FROM messages ORDER BY timestamp ASC");
 $stmt->execute();
@@ -63,32 +64,140 @@ $conn->close();
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #f5f5f5;
+            background-color: #ededed;
             margin: 0;
             padding: 0;
             display: flex;
             height: 100vh;
-            overflow: hidden; /* Hide page overflow */
+            overflow: hidden;
         }
 
-        .chat-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden; /* Hide content overflow */
-        }
-
-        .profile-container {
+        .left-container {
             width: 250px;
             padding: 20px;
-            background-color: #2ecc71;
+            background-color: #075e54;
             color: #fff;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Align content at the top */
+            justify-content: flex-start;
             position: sticky;
-            top: 0; /* Stick to the top */
+            top: 0;
+            height: 100vh;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+
+        .chat-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .chat-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            height: 100vh;
+        }
+
+        .chat-header {
+    background-color: #075e54;
+    color: #fff;
+    padding: 10px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    margin: 0; /* Remove default margin */
+    display: flex;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100; /* Ensure the header is on top of other elements */
+}
+
+        .user-profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .user-details h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .message {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .message p {
+            margin: 0;
+        }
+
+        .message strong {
+            color: #128C7E;
+        }
+
+        .message .timestamp {
+            color: #777;
+            font-size: 12px;
+        }
+
+        #reply-text {
+            width: calc(80% - 20px);
+            box-sizing: border-box;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        #reply-text:focus {
+            outline: none;
+            border-color: #075e54;
+        }
+
+        #send-button {
+            background-color: #075e54;
+            color: #fff;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        #send-button:hover {
+            background-color: #128C7E;
+        }
+
+        .profile-container {
+            width: 250px;
+            padding: 20px;
+            background-color: #128C7E;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: sticky;
+            top: 0;
             height: 100vh;
         }
 
@@ -113,117 +222,115 @@ $conn->close();
             padding: 10px;
             border: none;
             border-radius: 4px;
-            margin-top: auto; /* Push the button to the bottom */
-            background-color: #2980b9;
+            margin-top: auto;
+            background-color: #106e6e;
             color: #fff;
             display: block;
-            text-decoration: none; /* Remove underline */
+            text-decoration: none;
             transition: background-color 0.3s;
         }
 
         #logout-btn:hover {
-            background-color: #21618c;
+            background-color: #0a4a4a;
         }
 
-        .chat-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto; /* Enable vertical scroll */
-            height: 100vh;
-        }
+        .add-request-button {
+    font-size: 18px;
+    cursor: pointer;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    margin-top: 10px; /* Adjust the margin-top value as needed */
+    background-color: #106e6e;
+    color: #fff;
+    display: block;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
 
-        .message {
+.add-request-button:hover {
+    background-color: #0a4a4a;
+}
+
+        #request-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             background-color: #fff;
-            border: 1px solid #ddd;
+            padding: 20px;
             border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
 
-        .message p {
-            margin: 0;
-        }
-
-        .message strong {
-            color: #3498db;
-        }
-
-        .message .timestamp {
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
             color: #777;
-            font-size: 12px;
         }
 
-        .actions a {
-            margin-right: 10px;
-            color: #3498db;
-            text-decoration: none;
+        .rules-icon {
+            font-size: 24px;
             cursor: pointer;
+            margin-left: auto;
         }
 
-        .actions a:hover {
-            text-decoration: underline;
-        }
-
-        .report-icon, .delete-icon {
-            color: #e74c3c;
-        }
-
-        #reply-text {
-            width: calc(80% - 20px);
-            box-sizing: border-box;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            display: inline-block; /* Display the textarea and button inline */
-            vertical-align: top; /* Align the textarea to the top */
-        }
-
-        #reply-text:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        #send-button {
-            background-color: #3498db;
-            color: #fff;
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            display: inline-block; /* Display the textarea and button inline */
-            vertical-align: top; /* Align the button to the top */
-        }
-
-        #send-button:hover {
-            background-color: #2980b9;
+        #rules-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-content">
-            <h2>Welcome to the Student Chat</h2>
-            <?php foreach ($messages as $msg): ?>
-                <div class="message">
-                    <p>
-                        <span class="timestamp"><?= $msg['timestamp'] ?></span><br>
-                        <strong><?= $msg['sender_name'] ?>:</strong> <?= nl2br($msg['message']) ?>
-                    </p>
-                    <div class="actions">
-                        <a href="#" class="report-icon" onclick="reportMessage(<?= $msg['id'] ?>)">&#128681; Report</a>
-                        <?php if ($user_id == $msg['user_id']): ?>
-                            <a href="#" class="delete-icon" onclick="confirmDelete(<?= $msg['id'] ?>)">&#128465; Delete</a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
-            <form method="post" action="send_message_student.php" enctype="multipart/form-data">
-                <textarea id="reply-text" name="message" rows="4" required></textarea>
-                <input id="send-button" type="submit" value="Send">
-            </form>
+    <div class="left-container">
+        <!-- Your logo goes here -->
+        <img src="iCarelogo3.png" alt="Logo" class="logo">
+        <!-- Add this button at the bottom of the left container -->
+        <div class="add-request-button" onclick="openRequestPopup()">[+]</div>
+    </div>
+    <div class="chat-content">
+        <div class="chat-header">
+            <img src="<?= $user_pic ?>" alt="Profile Picture" class="user-profile-pic" onclick="toggleProfileContainer()">
+            <div class="user-details">
+                <h1><?= $first_name . " " . $last_name ?></h1>
+            </div>
+            <div id="rules-btn" class="rules-icon" onclick="openRulesPopup()">!</div>
         </div>
+
+    <?php foreach ($messages as $msg): ?>
+        <div class="message">
+            <img src="<?= $senderProfilePic ?>" alt="Sender's Profile" class="sender-profile-pic">
+            <p>
+                <span class="timestamp"><?= $msg['timestamp'] ?></span><br>
+                <strong><?= $msg['sender_name'] ?>:</strong> <?= nl2br($msg['message']) ?>
+            </p>
+            <div class="actions">
+                <a href="#" class="report-icon" onclick="reportMessage(<?= $msg['id'] ?>)">&#128681; Report</a>
+                <?php if ($user_id == $msg['user_id']): ?>
+                    <a href="#" class="delete-icon" onclick="confirmDelete(<?= $msg['id'] ?>)">&#128465; Delete</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endforeach; ?>
+
+    <form method="post" action="send_message_student.php" enctype="multipart/form-data">
+        <textarea id="reply-text" name="message" rows="4" required></textarea>
+        <input id="send-button" type="submit" value="Send">
+    </form>
+</div>
 
         <div class="profile-container">
             <!-- User Profile Information -->
@@ -236,6 +343,26 @@ $conn->close();
             </div>
         </div>
     </div>
+
+    <div id="request-popup">
+    <span class="close-button" onclick="closeRequestPopup()">&times;</span>
+    <h2>Make a Request</h2>
+    <form method="post" action="send_request_student.php">
+        <!-- Add your request form fields here -->
+        <textarea name="request_message" rows="4" required></textarea>
+        <br>
+        <input type="submit" value="Submit Request">
+    </form>
+</div>
+
+<div id="rules-popup">
+    <span class="close-button" onclick="closeRulesPopup()">&times;</span>
+    <h2>Chat Rules</h2>
+    <p>1. Be respectful to others.</p>
+    <p>2. No offensive language.</p>
+    <p>3. Follow community guidelines.</p>
+    <!-- Add more rules as needed -->
+</div>
 
     <script>
         function reportMessage(messageId) {
@@ -264,11 +391,38 @@ $conn->close();
             window.location.href = "login_student.php";
         }
     }
+   
+    function openRequestPopup() {
+        // Display a popup/modal
+        var requestPopup = document.getElementById("request-popup");
+        requestPopup.style.display = "block";
+    }
+
+    function closeRequestPopup() {
+        // Close the popup/modal
+        var requestPopup = document.getElementById("request-popup");
+        requestPopup.style.display = "none";
+    }
+
+    function openRulesPopup() {
+        var rulesPopup = document.getElementById("rules-popup");
+        rulesPopup.style.display = "block";
+    }
+
+    function closeRulesPopup() {
+        var rulesPopup = document.getElementById("rules-popup");
+        rulesPopup.style.display = "none";
+    }
+
+    function toggleProfileContainer() {
+                var profileContainer = document.querySelector('.profile-container');
+                // Toggle the visibility of the profile container
+                profileContainer.style.display = (profileContainer.style.display === 'none' || profileContainer.style.display === '') ? 'flex' : 'none';
+            }
     </script>
 
 </body>
 </html>
-
 
 
 
