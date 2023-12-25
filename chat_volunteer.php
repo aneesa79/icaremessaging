@@ -1,3 +1,4 @@
+
 <?php
 session_start();
 
@@ -15,7 +16,7 @@ if ($conn->connect_error) {
 }
 
 // Fetch user profile information
-$userProfileStmt = $conn->prepare("SELECT first_name, last_name,email, user_pic, user_type FROM users WHERE id = ?");
+$userProfileStmt = $conn->prepare("SELECT first_name, last_name, email, user_pic, user_type FROM users WHERE id = ?");
 $userProfileStmt->bind_param("i", $user_id);
 $userProfileStmt->execute();
 $userProfileStmt->bind_result($first_name, $last_name, $email, $user_pic, $user_type);
@@ -49,6 +50,22 @@ while ($stmt->fetch()) {
     ];
 }
 
+$requestStmt = $conn->prepare("SELECT requests.id, requests.user_id, requests.request_message, requests.timestamp, users.first_name, users.last_name, users.user_pic FROM requests LEFT JOIN users ON requests.user_id = users.id ORDER BY requests.timestamp ASC");
+$requestStmt->execute();
+$requestStmt->bind_result($req_id, $req_user_id, $request_message, $req_timestamp, $req_first_name, $req_last_name, $req_user_pic);
+
+$requests = [];
+while ($requestStmt->fetch()) {
+    $requests[] = [
+        'id' => $req_id,
+        'user_id' => $req_user_id,
+        'request_message' => $request_message,
+        'timestamp' => $req_timestamp,
+        'first_name' => $req_first_name,
+        'last_name' => $req_last_name,
+        'user_pic' => $req_user_pic
+    ];
+}
 $stmt->close();
 $conn->close();
 ?>
@@ -56,38 +73,172 @@ $conn->close();
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Volunteer Chat</title>
-
     <style>
+        /* Same CSS as chat_student */
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
             margin: 0;
             padding: 0;
             display: flex;
             height: 100vh;
-            overflow: hidden; /* Hide page overflow */
+            overflow: hidden;
+        }
+
+        .left-container {
+            width: 250px;
+            padding: 20px;
+            background-color: #075e54;
+            color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
         }
 
         .chat-container {
             display: flex;
+            flex-direction: column;
             flex: 1;
-            overflow: hidden; /* Hide content overflow */
+        }
+
+        .message-history-container {
+            overflow-y: auto;
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        .message-form-container {
+            padding: 10px;
+            background-color: #f0f0f0;
+            box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .chat-header {
+            background-color: #075e54;
+            color: #fff;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+        }
+
+        .user-profile-pic {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .user-details {
+            flex: 1;
+            text-align: left;
+        }
+
+        .user-details h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .message {
+            max-width: 70%;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .message-user {
+    background-color: #DCF8C6; /* Light green background, similar to WhatsApp */
+    margin-left: auto; /* Align to the right */
+    border-bottom-right-radius: 0; /* Optional: style adjustment */
+}
+
+.message-other {
+    background-color: #fff; /* White background for others' messages */
+    margin-right: auto; /* Align to the left */
+    border-bottom-left-radius: 0; /* Optional: style adjustment */
+}
+
+        .message p {
+            margin: 0;
+            word-wrap: break-word;
+        }
+
+        .timestamp {
+            display: block;
+            font-size: 12px;
+            color: #777;
+            text-align: right;
+        }
+
+        .message strong {
+            color: #075e54;
+        }
+
+        .message-form {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #reply-text {
+            width: calc(100% - 50px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: none;
+        }
+
+        #send-button {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background-color: transparent;
+            cursor: pointer;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #075e54;
+        }
+
+        #send-button:hover {
+            color: #128C7E;
+        }
+
+        #send-button i {
+            font-size: 24px;
         }
 
         .profile-container {
             width: 250px;
             padding: 20px;
-            background-color: #f2f2f2;
+            background-color: #128C7E;
+            color: #fff;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            display: flex;
+            display: none;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Align content at the top */
+            justify-content: flex-start;
             position: sticky;
-            top: 0; /* Stick to the top */
+            top: 0;
             height: 100vh;
         }
 
@@ -102,165 +253,156 @@ $conn->close();
             text-align: center;
         }
 
-        .chat-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto; /* Enable vertical scroll */
-            height: 100vh;
-        }
-
-        .message {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 15px;
-        }
-
-        .message p {
-            margin: 0;
-        }
-
-        .message strong {
-            color: #3498db;
-        }
-
-        .message .timestamp {
-            color: #777;
-            font-size: 12px;
-        }
-
-        .message .actions {
-            margin-top: 8px;
-        }
-
-        .actions a {
-            margin-right: 10px;
-            color: #3498db;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .actions a:hover {
-            text-decoration: underline;
-        }
-
-        .report-icon {
-            color: #e74c3c;
-        }
-
-        .delete-icon {
-            color: #e74c3c;
-        }
-
-        #reply-text {
-    width: calc(80% - 20px);
-    box-sizing: border-box;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    display: inline-block; /* Display the textarea and button inline */
-    vertical-align: top; /* Align the textarea to the top */
-}
-
-#reply-text:focus {
-    outline: none;
-    border-color: #3498db;
-}
-
-#send-button {
-    background-color: #3498db;
-    color: #fff;
-    padding: 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    display: inline-block; /* Display the textarea and button inline */
-    vertical-align: top; /* Align the button to the top */
-}
-
-
-        #send-button:hover {
-            background-color: #2980b9;
-        }
-
-        .popup {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
-            justify-content: center;
-            align-items: center;
-        }
-
-        .popup-content {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-            max-width: 400px;
-            width: 80%;
-            text-align: center;
-        }
-
-        .close {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 20px;
-            cursor: pointer;
-            color: #333;
-        }
-
-        /* Style for the coupon deals */
-        .coupon-deal {
-            margin-bottom: 20px;
-        }
-
-        .coupon-deal img {
-            max-width: 100%;
-            border-radius: 8px;
+        .profile-details p {
+            margin: 5px 0;
         }
 
         #logout-btn {
-        font-size: 16px;
-        cursor: pointer;
-        padding: 10px;
-        border: 1px solid #ddd; /* Add a border for a button-like appearance */
-        border-radius: 4px;
-        margin-top: auto; /* Push the button to the bottom */
-        margin-bottom: 10px; /* Add margin for spacing */
-        margin-right: 10px; /* Add margin for spacing */
-        display: flex;
-        align-items: center;
-        text-decoration: none; /* Remove underline */
-        color: #333; /* Set text color */
-    }
+            font-size: 16px;
+            cursor: pointer;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            margin-top: auto;
+            background-color: #106e6e;
+            color: #fff;
+            display: block;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        #logout-btn:hover {
+            background-color: #0a4a4a;
+        }
+
+        #rules-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .popup {
+    display: none; /* Initially hidden */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Above other elements */
+}
+
+.popup-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    /* You can adjust width as needed */
+}
+
+.close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    cursor: pointer;
+    /* Style for close button */
+}
+
+.action-button {
+    font-size: 16px;
+    cursor: pointer;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    margin-top: 10px;
+    background-color: #106e6e;
+    color: #fff;
+    display: block;
+    text-decoration: none;
+    transition: background-color 0.3s;
+    width: 100%; /* Ensure the buttons take up the full width */
+    text-align: center; /* Center the button text horizontally */
+}
+
+.action-button:hover {
+    background-color: #0a4a4a;
+}
+
+#coupon-deals-btn {
+    margin-bottom: 10px; /* Add margin to separate the buttons vertically */
+}
+
+.request-item {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    cursor: pointer;
+}
+
+.request-item:hover {
+    background-color: #ececec;
+}
+
+.request-item p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.request-item .timestamp {
+    display: block;
+    font-size: 12px;
+    color: #777;
+}
+
+.request-message {
+    background-color: #FFFFFF; /* Light blue background for distinction */
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    border-left: 5px solid #075e54; /* A solid left border for emphasis */
+}
+
+.request-message strong {
+    color: #106e6e; /* Darker text for the 'Request' label */
+}
+
     </style>
 
 </head>
 <body>
-    <div class="chat-container">
-        <div class="profile-container">
-            <!-- User Profile Information -->
-            <img src="<?= $user_pic ?>" alt="Profile Picture" class="profile-pic">
-            <div class="profile-details">
-                <p><strong>Name:</strong> <?= $first_name . " " . $last_name ?></p>
-                <p><strong>Email:</strong> <?= $email ?></p>
-                <p><strong>Type:</strong> <?= $user_type ?></p>
-                <button id="coupon-deals-btn" onclick="showCouponDealsPopup()">Coupon Deals</button>
-                <button id="logout-btn" onclick="logoutUser()">Logout</button>
-            </div>
+    <div class="left-container">
+        <!-- Your logo goes here -->
+        <img src="iCarelogo3.png" alt="Logo" class="logo">
+        <div class="requests-list">
+    <?php foreach ($requests as $request): ?>
+        <div class="request-item" onclick="loadRequestMessages('<?= htmlspecialchars(json_encode($request)) ?>')">
+            <p><?= htmlspecialchars($request['request_message']) ?></p>
+            <span class="timestamp"><?= htmlspecialchars($request['timestamp']) ?></span>
         </div>
-
-        <div class="chat-content">
-            <h2>Welcome to the Volunteer Chat</h2>
+    <?php endforeach; ?>
+    </div>
+</div>
+    </div>
+    <div class="chat-container">
+        <div class="chat-header">
+            <img src="<?= $user_pic ?>" alt="Profile Picture" class="user-profile-pic" onclick="toggleProfileContainer()">
+            <div class="user-details">
+                <h1><?= $first_name . " " . $last_name ?></h1>
+            </div>
+            <div id="rules-btn" class="rules-icon" onclick="openRulesPopup()">!</div>
+        </div>
+        <div class="message-history-container">
             <?php foreach ($messages as $msg): ?>
-                <div class="message">
+                <div class="message <?= ($user_id == $msg['user_id']) ? 'message-user' : 'message-other' ?>">
                     <p>
                         <span class="timestamp"><?= $msg['timestamp'] ?></span><br>
                         <strong><?= $msg['sender_name'] ?>:</strong> <?= nl2br($msg['message']) ?>
@@ -272,33 +414,44 @@ $conn->close();
                         <?php endif; ?>
                     </div>
                 </div>
-            <?php endforeach; ?>
+            <?php endforeach; ?>       
+        </div>
+        <div class="message-form-container">
+        <form method="post" action="send_message_volunteer.php" enctype="multipart/form-data" class="message-form">
+    <input type="hidden" name="request_id" id="request-id-input" value="">        
+    <textarea id="reply-text" name="message" rows="1" required></textarea>
+    <button id="send-button" type="submit">
+        <i class="fa fa-paper-plane" aria-hidden="true"></i>
+    </button>
+</form>
 
-            <form method="post" action="send_message_volunteer.php" enctype="multipart/form-data">
-                <textarea id="reply-text" name="message" rows="4" required></textarea>
-                <input id="send-button" type="submit" value="Send">
-            </form>
         </div>
     </div>
 
-    <div id="coupon-deals-popup" class="popup">
-        <div class="popup-content">
-            <span class="close" onclick="hideCouponDealsPopup()">&times;</span>
-            <h2>Coupon Deals</h2>
-            
-            <!-- Example Coupon Deal 1 -->
-            <div class="coupon-deal">
-                <img src="nasi ayam.jpeg" alt="Nasi Ayam">
-                <p>Redeem 10 points for a delicious plate of Nasi Ayam!</p>
-            </div>
+    <div class="profile-container">
+        <!-- User Profile Information -->
+        <img src="<?= $user_pic ?>" alt="Profile Picture" class="profile-pic">
+        <div class="profile-details">
+            <p><strong>Name:</strong> <?= $first_name . " " . $last_name ?></p>
+            <p><strong>Email:</strong> <?= $email ?></p>
+            <p><strong>Type:</strong> <?= $user_type ?></p>
+            <button id="coupon-deals-btn" class="action-button" onclick="showCouponDealsPopup()">Coupon Deals</button>
+            <a id="logout-btn" href="#" onclick="logoutUser()">Logout</a>
+        </div>
+    </div>
 
-            <!-- Example Coupon Deal 2 -->
-            <div class="coupon-deal">
-                <img src="path/to/another_coupon_image.jpg" alt="Another Coupon">
-                <p>Redeem 15 points for another fantastic deal!</p>
-            </div>
+    <div id="rules-popup">
+    <span class="close-button" onclick="closeRulesPopup()">&times;</span>
+    <h2>Chat Rules</h2>
+    <p>1. Be respectful to others.</p>
+    <p>2. No offensive language.</p>
+    <p>3. Follow community guidelines.</p>
+    <!-- Add more rules as needed -->
+</div>
 
     <script>
+            var loggedInUserId = <?= json_encode($user_id); ?>;
+
         function reportMessage(messageId) {
             var confirmReport = confirm("Do you want to report this message?");
             if (confirmReport) {
@@ -313,25 +466,6 @@ $conn->close();
             }
         }
 
-        function showCouponDealsPopup() {
-            var popup = document.getElementById('coupon-deals-popup');
-            popup.style.display = 'flex';
-        }
-
-        // Function to hide the Coupon Deals pop-up
-        function hideCouponDealsPopup() {
-            var popup = document.getElementById('coupon-deals-popup');
-            popup.style.display = 'none';
-        }
-
-        // Close the pop-up if the user clicks outside of it
-        window.onclick = function(event) {
-            var popup = document.getElementById('coupon-deals-popup');
-            if (event.target == popup) {
-                popup.style.display = 'none';
-            }
-        };
-
         function logoutUser() {
             // You can redirect the user to the logout page or perform any other logout operations here
             window.location.href = "login_volunteer.php";
@@ -344,8 +478,100 @@ $conn->close();
             window.location.href = "login_volunteer.php";
         }
     }
+    function toggleProfileContainer() {
+            var profileContainer = document.querySelector('.profile-container');
+            // Toggle the visibility of the profile container
+            profileContainer.style.display = (profileContainer.style.display === 'none' || profileContainer.style.display === '') ? 'flex' : 'none';
+        }
+
+        function showCouponDealsPopup() {
+    var popup = document.getElementById('coupon-deals-popup');
+    popup.style.display = 'flex';
+}
+
+function hideCouponDealsPopup() {
+    var popup = document.getElementById('coupon-deals-popup');
+    popup.style.display = 'none';
+}
+
+// Optional: Close the popup when clicking outside of it
+window.onclick = function(event) {
+    var popup = document.getElementById('coupon-deals-popup');
+    if (event.target == popup) {
+        popup.style.display = 'none';
+    }
+};
+
+function openRulesPopup() {
+    var rulesPopup = document.getElementById("rules-popup");
+    rulesPopup.style.display = "block";
+}
+
+function closeRulesPopup() {
+    var rulesPopup = document.getElementById("rules-popup");
+    rulesPopup.style.display = "none";
+}
+
+function loadRequestMessages(requestId) {
+    document.getElementById('request-id-input').value = request.id;
+    // You can use AJAX here to fetch messages for the selected request and update the message history container
+    // Example:
+    fetch('get_request_messages.php?request_id=' + requestId)
+        .then(response => response.json())
+        .then(messages => {
+            // Update the message history container with these messages
+            // You will need to write code to update the HTML based on the messages received
+        });
+}
+
+function loadRequestMessages(requestData) {
+    var request = JSON.parse(requestData);
+    document.getElementById('request-id-input').value = request.id;
+
+    // Update chat header with request owner's details
+    var chatHeader = document.querySelector('.chat-header');
+    chatHeader.innerHTML = `
+        <img src="${request.user_pic}" alt="Profile Picture" class="user-profile-pic">
+        <div class="user-details">
+            <h1>${request.first_name} ${request.last_name}</h1>
+        </div>
+    `;
+
+    // Clear previous messages and add the request message at the top
+    var messageHistoryContainer = document.querySelector('.message-history-container');
+    messageHistoryContainer.innerHTML = `
+        <div class="message request-message">
+            <p>
+                <span class="timestamp">${request.timestamp}</span><br>
+                <strong>Request:</strong> ${request.request_message}
+            </p>
+        </div>
+    `;
+
+    // Load messages related to the request
+    fetch('get_request_messages.php?request_id=' + request.id)
+        .then(response => response.json())
+        .then(messages => {
+            messages.forEach(msg => {
+    var messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + (msg.user_id == loggedInUserId ? 'message-user' : 'message-other');
+    messageDiv.innerHTML = `
+        <p>
+            <span class="timestamp">${msg.timestamp}</span><br>
+            <strong>${msg.sender_name}:</strong> ${msg.message}
+        </p>
+    `;
+    messageHistoryContainer.appendChild(messageDiv);
+});
+        });
+}
     </script>
+<div id="coupon-deals-popup" class="popup">
+    <div class="popup-content">
+        <span class="close" onclick="hideCouponDealsPopup()">&times;</span>
+        <h2>Coupon Deals</h2>
+        <!-- Content for your coupon deals goes here -->
+    </div>
+</div>
 </body>
 </html>
-
-
