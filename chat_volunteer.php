@@ -90,11 +90,13 @@ $conn->close();
         .parent-container {
             display: flex; 
             overflow: visible; 
+            position: relative; 
+
         }
 
 
         .left-container {
-            width: 37%;
+            width: 37vw;
             /* padding: 5%; */
             background-color: #075e54;
             color: #fff;
@@ -205,7 +207,7 @@ $conn->close();
         }
 
         .request-message strong {
-            color: #106e6e; /* Darker text for the 'Request' label */
+            color: #106e6e; 
         }
 
         .chat-container {
@@ -214,6 +216,7 @@ $conn->close();
             flex: 1;
             position:sticky;
             overflow: visible;
+            width: 63vw;
         }
 
 
@@ -343,6 +346,7 @@ $conn->close();
         }
 
         .profile-container {
+            z-index: 1; 
             width: 250px;
             padding: 20px;
             background-color: #128C7E;
@@ -352,8 +356,9 @@ $conn->close();
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            position: sticky;
+            position: fixed;
             top: 0;
+            right:0;
             height: 100vh;
         }
 
@@ -477,7 +482,7 @@ $conn->close();
                 </div>
             </div>
         </div>
-        <!-- </div> -->
+
         <div class="chat-container">
             <div class="chat-header">
                 <img src="<?= $user_pic ?>" alt="Profile Picture" class="user-profile-pic" onclick="toggleProfileContainer()">
@@ -575,8 +580,11 @@ $conn->close();
 
         function toggleProfileContainer() {
             var profileContainer = document.querySelector('.profile-container');
-            // Toggle the visibility of the profile container
-            profileContainer.style.display = (profileContainer.style.display === 'none' || profileContainer.style.display === '') ? 'flex' : 'none';
+            if (profileContainer.style.display === 'none' || profileContainer.style.display === '') {
+                profileContainer.style.display = 'block';
+            } else {
+                profileContainer.style.display = 'none';
+            }
         }
 
         function showCouponDealsPopup() {
@@ -607,18 +615,6 @@ $conn->close();
             rulesPopup.style.display = "none";
         }
 
-// function loadRequestMessages(requestId) {
-//     document.getElementById('request-id-input').value = request.id;
-//     // You can use AJAX here to fetch messages for the selected request and update the message history container
-//     // Example:
-//     fetch('get_request_messages.php?request_id=' + requestId)
-//         .then(response => response.json())
-//         .then(messages => {
-//             // Update the message history container with these messages
-//             // You will need to write code to update the HTML based on the messages received
-//         });
-// }
-
         function loadRequestMessages(requestData) {
             var request = JSON.parse(requestData);
             document.getElementById('request-id-input').value = request.id;
@@ -626,10 +622,11 @@ $conn->close();
             // Update chat header with request owner's details
             var chatHeader = document.querySelector('.chat-header');
             chatHeader.innerHTML = `
-                <img src="${request.user_pic}" alt="Profile Picture" class="user-profile-pic">
+                <img src="${request.user_pic}" alt="Profile Picture" class="user-profile-pic" onclick="toggleProfileContainer()">
                 <div class="user-details">
                     <h1>${request.first_name} ${request.last_name}</h1>
                 </div>
+                <div id="rules-btn" class="rules-icon" onclick="openRulesPopup()">!</div>
             `;
 
             // Clear previous messages and add the request message at the top
@@ -648,9 +645,10 @@ $conn->close();
                 .then(response => response.json())
                 .then(messages => {
                     messages.forEach(msg => {
-                    var messageDiv = document.createElement('div');
-                    messageDiv.className = 'message ' + (msg.user_id == loggedInUserId ? 'message-user' : 'message-other');
-                    messageDiv.innerHTML = `
+                    var messageDiv = document.createElement('div'); //create new bubble 'messageDiv' of message
+                    messageDiv.className = 'message ' + (msg.user_id == loggedInUserId ? 'message-user' : 'message-other');  //differentiate wheteher message from user or someone else
+                    //add timestamp to buble
+                    messageDiv.innerHTML = `  
                         <p>
                             <span class="timestamp">${msg.timestamp}</span><br>
                             <strong>${msg.sender_name}:</strong> ${msg.message}
@@ -658,7 +656,7 @@ $conn->close();
                     `;
                 messageHistoryContainer.appendChild(messageDiv);
             });
-        });
+            });
         }
     </script>
 </body>
