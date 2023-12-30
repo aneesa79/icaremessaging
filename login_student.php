@@ -12,6 +12,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Check if the email and password match a volunteer user
     $stmt = $conn->prepare("SELECT id, email, password FROM users WHERE email = ? AND user_type = 'student'");
+    if ($stmt === false) {
+        die("Error preparing statement: " . $conn->error);
+    }
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $stmt->store_result();
