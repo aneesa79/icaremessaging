@@ -34,9 +34,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 // Fetch all messages with sender's name
-$stmt = $conn->prepare("SELECT id, sender_name, user_id, message, timestamp FROM messages ORDER BY timestamp ASC");
+$stmt = $conn->prepare("SELECT id, sender_name, user_id, message, timestamp, request_id FROM messages ORDER BY timestamp ASC");
 $stmt->execute();
-$stmt->bind_result($msg_id, $sender_name, $sender_id, $message, $timestamp);
+$stmt->bind_result($msg_id, $sender_name, $sender_id, $message, $timestamp, $request_id);
 
 $messages = [];
 while ($stmt->fetch()) {
@@ -45,7 +45,8 @@ while ($stmt->fetch()) {
         'sender_name' => $sender_name,
         'user_id' => $sender_id,
         'message' => $message,
-        'timestamp' => $timestamp
+        'timestamp' => $timestamp,
+        'request_id' => $request_id
     ];
 }
 
@@ -491,21 +492,7 @@ $conn->close();
                 </div>
                 <div id="rules-btn" class="rules-icon" onclick="openRulesPopup()">!</div>
             </div>
-            <div class="message-history-container">
-                <?php foreach ($messages as $msg): ?>
-                    <div class="message <?= ($user_id == $msg['user_id']) ? 'message-user' : 'message-other' ?>">
-                        <p>
-                            <span class="timestamp"><?= $msg['timestamp'] ?></span><br>
-                            <strong><?= $msg['sender_name'] ?>:</strong> <?= nl2br($msg['message']) ?>
-                        </p>
-                        <div class="actions">
-                            <a href="#" class="report-icon" onclick="reportMessage(<?= $msg['id'] ?>)">&#128681; Report</a>
-                            <?php if ($user_id == $msg['user_id']): ?>
-                                <a href="#" class="delete-icon" onclick="confirmDelete(<?= $msg['id'] ?>)">&#128465; Delete</a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>       
+            <div class="message-history-container">   
             </div>
             <div class="message-form-container">
                 <form method="post" action="send_message_volunteer.php" enctype="multipart/form-data" class="message-form">
@@ -550,7 +537,34 @@ $conn->close();
 
     <script>
         var loggedInUserId = <?= json_encode($user_id); ?>;
+        var messages = <?php echo json_encode($messages); ?>;
 
+        document.querySelector('.message-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            var formData = new FormData(event.target);
+
+            fetch('send_message_volunteer.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Create a new element for the message
+                    var newMessage = document.createElement('p');
+                    newMessage.textContent = formData.get('message');
+
+                    // Append the new message to the message-history-container
+                    document.querySelector('.message-history-container').appendChild(newMessage);
+                } else {
+                    console.log('Error: message cannot be sent to send_message_volunteer.php');
+                }
+            });
+            document.querySelector('#reply-text').value = '';
+        });
+
+        
         function reportMessage(messageId) {
             var confirmReport = confirm("Do you want to report this message?");
             if (confirmReport) {
@@ -616,15 +630,15 @@ $conn->close();
         }
 
         function loadRequestMessages(requestData) {
-            var request = JSON.parse(requestData);
-            document.getElementById('request-id-input').value = request.id;
+            var requests = JSON.parse(requestData);
+            document.getElementById('request-id-input').value = requests.id;
 
             // Update chat header with request owner's details
             var chatHeader = document.querySelector('.chat-header');
             chatHeader.innerHTML = `
-                <img src="${request.user_pic}" alt="Profile Picture" class="user-profile-pic" onclick="toggleProfileContainer()">
+                <img src="${requests.user_pic}" alt="Profile Picture" class="user-profile-pic" onclick="toggleProfileContainer()">
                 <div class="user-details">
-                    <h1>${request.first_name} ${request.last_name}</h1>
+                    <h1>${requests.first_name} ${requests.last_name}</h1>
                 </div>
                 <div id="rules-btn" class="rules-icon" onclick="openRulesPopup()">!</div>
             `;
@@ -634,30 +648,39 @@ $conn->close();
             messageHistoryContainer.innerHTML = `
                 <div class="message request-message">
                     <p>
-                        <span class="timestamp">${request.timestamp}</span><br>
-                        <strong>Request:</strong> ${request.request_message}
+                        <span class="timestamp">${requests.timestamp} ${requests.id}</span><br>
+                        <strong>Request:</strong> ${requests.request_message}
                     </p>
                 </div>
             `;
 
-            // Load messages related to the request
-            fetch('get_request_messages.php?request_id=' + request.id)
-                .then(response => response.json())
-                .then(messages => {
-                    messages.forEach(msg => {
-                    var messageDiv = document.createElement('div'); //create new bubble 'messageDiv' of message
-                    messageDiv.className = 'message ' + (msg.user_id == loggedInUserId ? 'message-user' : 'message-other');  //differentiate wheteher message from user or someone else
-                    //add timestamp to buble
-                    messageDiv.innerHTML = `  
+            var displayedMessageIds = new Set();
+
+            for (let i = 0; i < messages.length; i++) {
+                if (messages[i].request_id == requests.id) {
+
+                    if (displayedMessageIds.has(messages[i].id)) {
+                        continue;
+                    } 
+                    var messageDiv = document.createElement('div');
+                    messageDiv.className = 'message ' + (loggedInUserId == messages[i].user_id ? 'message-user' : 'message-other');  //differentiate whether message from user or someone else
+                    messageDiv.innerHTML = `
                         <p>
-                            <span class="timestamp">${msg.timestamp}</span><br>
-                            <strong>${msg.sender_name}:</strong> ${msg.message}
+                            <span class="timestamp">${messages[i].timestamp} ${messages[i].request_id} ${messages[i].id}</span><br>
+                            <strong>${messages[i].sender_name}:</strong> ${messages[i].message.replace(/\n/g, '<br>')}
                         </p>
+                        <div class="actions">
+                            <a href="#" class="report-icon" onclick="reportMessage(${messages[i].id})">&#128681; Report</a>
+                            ${(messages[i].user_id == loggedInUserId) ? `<a href="#" class="delete-icon" onclick="confirmDelete(${messages[i].id})">&#128465; Delete</a>` : ''}
+                        </div>
                     `;
-                messageHistoryContainer.appendChild(messageDiv);
-            });
-            });
-        }
+                    messageHistoryContainer.appendChild(messageDiv);
+
+                    displayedMessageIds.add(messages[i].id);
+                }
+            }
+        }   
+        
     </script>
 </body>
 </html>
