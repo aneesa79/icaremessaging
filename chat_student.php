@@ -47,7 +47,7 @@ while ($stmt->fetch()) {
         'sender_name' => $sender_name,
         'user_id' => $sender_id,
         'message' => $message,
-        'timestamp' => $timestamp
+        'timestamp' => $timestamp,
     ];
 }
 
@@ -93,10 +93,11 @@ $conn->close();
         .parent-container {
             display: flex; 
             overflow: visible; 
+            position: relative; 
         }
 
         .left-container {
-            width: 37%;
+            width: 37vw;
             /* padding: 5%; */
             background-color: #075e54;
             color: #fff;
@@ -227,30 +228,13 @@ $conn->close();
             color: #106e6e; /* Darker text for the 'Request' label */
         }
 
-        #add-request-button {
-            position:absolute;
-            font: 3vw;
-            bottom: 8px; 
-            width: 12%; 
-            height: 10%; 
-            border-radius: 100%; 
-            border: 1px #777;
-        }
-
-        #add-request-button:hover {
-            background-color: #ccc; 
-        }
-
-        #add-request-button:active {
-            background-color: #7ABCB4;
-        }
-
         .chat-container {
             display: flex;
             flex-direction: column;
             flex: 1;
             position:sticky;
             overflow: visible;
+            width: 63vw;
         }
 
         .chat-header {
@@ -379,6 +363,7 @@ $conn->close();
         }
 
         .profile-container {
+            z-index: 1; 
             width: 250px;
             padding: 20px;
             background-color: #128C7E;
@@ -388,8 +373,9 @@ $conn->close();
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            position: sticky;
+            position: fixed;
             top: 0;
+            right:0;
             height: 100vh;
         }
 
@@ -427,17 +413,17 @@ $conn->close();
         }
 
         .popup {
-            display: none; 
+            display: none; /* Initially hidden */
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); 
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 1000; 
+            z-index: 1000; /* Above other elements */
         }
 
         .popup-content {
@@ -478,11 +464,30 @@ $conn->close();
             margin-bottom: 10px; 
         }
 
-        #award-points-popup {
+        #coupon-deals-popup {
             display: none;
         }
 
-        #coupon-deals-popup {
+        #add-request-button {
+            position:absolute;
+            font: 3vw;
+            bottom: 8px; 
+            width: 12%; 
+            height: 10%; 
+            border-radius: 100%; 
+            border: 1px #777;
+        }
+
+        #add-request-button:hover {
+            background-color: #ccc; 
+        }
+
+        #add-request-button:active {
+            background-color: #7ABCB4;
+        }
+
+
+        #award-points-popup {
             display: none;
         }
 
@@ -542,7 +547,7 @@ $conn->close();
                 <div id="rules-btn" class="rules-icon" onclick="openRulesPopup()">!</div>
             </div>
             <div class="message-history-container">
-                <?php foreach ($messages as $msg): ?>
+                <!-- <?php foreach ($messages as $msg): ?>
                     <div class="message <?= ($user_id == $msg['user_id']) ? 'message-user' : 'message-other' ?>">
                         <p>
                             <span class="timestamp"><?= $msg['timestamp'] ?></span><br>
@@ -555,7 +560,7 @@ $conn->close();
                             <?php endif; ?>
                         </div>
                     </div>
-                <?php endforeach; ?>       
+                <?php endforeach; ?>        -->
             </div>
             <div class="message-form-container">
                 <form method="post" action="send_message_volunteer.php" enctype="multipart/form-data" class="message-form">
@@ -566,6 +571,18 @@ $conn->close();
                     </button>
                 </form>
             </div>
+        </div>
+
+        <div id="profile-container" class="profile-container">
+            <img src="<?= $user_pic ?>" alt="Profile Picture" class="profile-pic">
+                <div class="profile-details">
+                    <h2><?= $first_name . " " . $last_name ?></h2>
+                    <p><?= $email ?></p>
+                    <p>User Type: <?= $user_type ?></p>
+                </div>
+
+                <button id="coupon-deals-btn">Show Coupon Deals</button>
+                <button id="logout-btn" onclick="logoutUser()">Logout</button>
         </div>
 
         <div id="rules-popup">
@@ -593,18 +610,6 @@ $conn->close();
             </div>
         </div>
 
-        <div id="profile-container" class="profile-container">
-            <img src="<?= $user_pic ?>" alt="Profile Picture" class="profile-pic">
-                <div class="profile-details">
-                    <h2><?= $first_name . " " . $last_name ?></h2>
-                    <p><?= $email ?></p>
-                    <p>User Type: <?= $user_type ?></p>
-                </div>
-
-                <button id="coupon-deals-btn">Show Coupon Deals</button>
-                <button id="logout-btn" onclick="logoutUser()">Logout</button>
-        </div>
-
         <div id="coupon-deals-popup" class="popup">
             <div class="popup-content">
                 <span class="close" onclick="hideCouponDealsPopup()">&times;</span>
@@ -618,6 +623,7 @@ $conn->close();
 
     <script>
         var loggedInUserId = <?= json_encode($user_id); ?>;
+        var messages = <?php echo json_encode($messages); ?>;
 
             function searchReqItem() {
                 var input, filter, ul, li, a, i;

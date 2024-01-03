@@ -80,36 +80,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            height: 100%;
+            font-size: 1em; 
         }
 
         form {
             background-color: #fff;
-            padding: 20px;
+            padding: 4%;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
+            max-width: 40%;
             width: 100%;
             text-align: center;
         }
 
         h2 {
-            color: #333;
+            color: #333;    
+            font-size: 1.5em; 
         }
 
         input {
             width: 100%;
-            padding: 10px;
-            margin: 8px 0;
+            padding: 3%;
+            margin: 2% 0;
             box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 4px;
+            font-size: 0.9em;
         }
 
         input[type="submit"] {
             background-color: #4caf50;
             color: white;
             cursor: pointer;
+            font-size: 1em;
         }
 
         input[type="submit"]:hover {
@@ -119,18 +123,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         a {
             text-decoration: none;
             color: #007bff;
+            font-size: 1em;
         }
 
         p {
             margin: 10px 0;
             color: #555;
+            font-size: 1em; 
         }
 
         label {
             font-weight: bold;
             text-align: left;
             display: block;
-            margin-top: 10px;
+            margin-top: 2%;
+            font-size: 1em; 
         }
 
         .password-container {
@@ -140,16 +147,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         .show-password-icon {
             position: absolute;
             top: 50%;
-            right: 10px;
+            right: 2%;
             transform: translateY(-50%);
             cursor: pointer;
             color: #777;
         }
 
         .login-link {
-            margin-top: 10px;
-            font-size: 14px;
-        }
+            margin-top: 2%;
+            font-size: 0.875em;         }
     </style>
 </head>
 <body>
